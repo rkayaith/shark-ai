@@ -1141,6 +1141,8 @@ def benchmark(
     all_candidates_with_speedup = baseline_handler.get_candidates_ordered_by_speedup(
         candidate_results
     )
+    if all(speedup >= 1 for _, speedup in all_candidates_with_speedup):
+        raise RuntimeError("No tuner configs provided a speedup")
     top_candidates_with_speedup = all_candidates_with_speedup[:num_candidates]
     top_candidate_ids = []
     if baseline_handler.is_valid():
