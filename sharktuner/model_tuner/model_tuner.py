@@ -106,7 +106,9 @@ def main(parser_args: Sequence[str] | None = None) -> None:
     stop_after_phase: str = args.stop_after
 
     print("[WARNING] SHARK Tuner is still experimental")
-    root_logger = libtuner.setup_logging(args, path_config)
+    # root_logger = libtuner.setup_logging(args, path_config)
+    logging.basicConfig(level=logging.INFO, force=True)
+    root_logger = None
     print(path_config.run_log, end="\n\n")
 
     if not args.dry_run:
