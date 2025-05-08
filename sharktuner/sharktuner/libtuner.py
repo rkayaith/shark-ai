@@ -1085,6 +1085,8 @@ def compile(
         compiled_candidates = unique_compiled_candidates
 
     logging.debug(f"Produced [{len(compiled_candidates)}] unique vmfbs")
+    if set(compiled_candidates) <= {0}:
+        raise ValueError("Failed to compile any non-default candidates")
     return compiled_candidates
 
 
