@@ -229,7 +229,7 @@ def test_get_group_conv_operation(tuner_ctx: common.TunerContext) -> None:
     root_op = root_op_list[0]
     parser = dispatch_parser.ConvolutionOpInterfaceParser(root_op)
     assert parser.get_root_op_func_name() == "match_test"
-    assert parser.has_valid_root_op() is False, "group convs aren't supported yet"
+    assert parser.has_valid_root_op()
 
 
 def test_get_generic_conv_operation(tuner_ctx: common.TunerContext) -> None:

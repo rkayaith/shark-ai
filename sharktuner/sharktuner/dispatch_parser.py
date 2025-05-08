@@ -69,17 +69,21 @@ class ConvolutionOpInterfaceParser(DispatchParser):
             return False
         convolution_dims = linalg.infer_convolution_dimensions(root_op)
         assert convolution_dims, "no convolution dimensions"
-        # Only allow 'nhwc_hwcf' convs.
+        # Only allow 'nhw[g]c_hwcf' convs.
         # TODO: This dispatch parser class supports more layouts, but constraint
         #       generation is not tested. Relax this check as support is verified.
-        if (
-            list(convolution_dims.batch) != [0]
-            or list(convolution_dims.output_image) != [1, 2]
-            or list(convolution_dims.output_channel) != [3]
-            or list(convolution_dims.filter_loop) != [4, 5]
-            or list(convolution_dims.input_channel) != [6]
-            or list(convolution_dims.depth) != []
-        ):
+        convolution_dims = (
+            list(convolution_dims.batch),
+            list(convolution_dims.output_image),
+            list(convolution_dims.depth),
+            list(convolution_dims.output_channel),
+            list(convolution_dims.filter_loop),
+            list(convolution_dims.input_channel),
+        )
+        nhwc_hwcf = ([0], [1, 2], [], [3], [4, 5], [6])
+        nhwgc_hwcf = ([0], [1, 2], [3], [4], [5, 6], [7])
+        if convolution_dims not in [nhwc_hwcf, nhwgc_hwcf]:
+            breakpoint()
             return False
         return True
 

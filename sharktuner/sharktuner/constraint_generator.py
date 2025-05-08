@@ -219,12 +219,10 @@ def generate_generic_contraction_solutions(
             promote_operands = [0, 1, 2]
             _, _, mma_intrinsic_k = mma_attr.mnk_shape
             padding = [
-                *(workgroup_tile_sizes[d] for d in contraction_dims.m),
-                *(workgroup_tile_sizes[d] for d in contraction_dims.n),
-                *(
-                    reduction_tile_sizes[d] * mma_intrinsic_k
-                    for d in contraction_dims.k
-                ),
+                wts if wts != 0 else rts * mma_intrinsic_k
+                for wts, rts in zip(
+                    workgroup_tile_sizes, reduction_tile_sizes, strict=True
+                )
             ]
         # Setting subgroup basis.
         # TODO(Bangtian): Sync changes from IREE PR: https://github.com/iree-org/iree/pull/22000.
