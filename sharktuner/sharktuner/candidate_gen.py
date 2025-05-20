@@ -203,6 +203,7 @@ def generate_configs_and_td_specs(
 
     constraint_generator = dispatch_tuner.get_constraint_generator()
 
+    configs = []
     for i, config in enumerate(
         constraint_generator.generate_solutions(
             tuner_context,
@@ -213,6 +214,60 @@ def generate_configs_and_td_specs(
             pipeline_options_search_space=pipeline_options_search_space,
         )
     ):
+        configs.append(config)
+        print(f"Generated {len(configs)} configs", end="\r")
+    print(f"Generated {len(configs)} configs")
+
+    # Prefer leading sizes to be smaller.
+    configs = sorted(
+        configs,
+        key=lambda c: (
+            *c.lowering_config.reduction_tile_sizes,
+            *c.lowering_config.workgroup_tile_sizes,
+        ),
+    )
+
+    # Prefer less operand promotion.
+    # TODO: Reconsider this
+    configs = sorted(
+        configs, key=lambda c: len(c.lowering_config.attributes["promote_operands"])
+    )
+
+    import math
+
+    # Prefer larger tile size "area".
+    configs = sorted(
+        configs,
+        reverse=True,
+        key=lambda c: math.prod(
+            s
+            for s in [
+                *c.lowering_config.workgroup_tile_sizes,
+                *c.lowering_config.reduction_tile_sizes,
+            ]
+            if s != 0
+        ),
+    )
+
+    def is_pow2(n: int):
+        return (n & (n - 1) == 0) and n != 0
+
+    # Prefer more power-of-2 workgroup and reduction tile sizes.
+    configs = sorted(
+        configs,
+        reverse=True,
+        key=lambda c: sum(
+            is_pow2(s)
+            for s in [
+                *c.lowering_config.workgroup_tile_sizes,
+                *c.lowering_config.reduction_tile_sizes,
+            ]
+        ),
+    )
+
+    print(">>> Done")
+
+    for i, config in enumerate(configs):
         if i >= limit:
             break
         tune_logger.debug(f"Solution #{i+1}: {config}")
