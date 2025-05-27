@@ -18,6 +18,8 @@ ROOT_OP_ATTR_NAME = "root_op"
 
 
 def get_placeholder_spec(context: ir.Context) -> ir.Module:
+    # HACK: Merging doesn't seem to work properly when `--starter-td-spec` is used... Need to debug.
+    return ir.Module.parse("", context)
     spec_text = f"""
         module attributes {{ transform.with_named_sequence }} {{
             transform.named_sequence
