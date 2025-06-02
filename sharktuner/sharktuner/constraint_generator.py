@@ -550,10 +550,15 @@ class ConvolutionOpInterfaceConstraintGenerator(ConstraintGenerator):
         convolution_dims = linalg.infer_convolution_dimensions(root_op)
         assert convolution_dims, "no convolution dimensions"
         contraction_dims = common.ContractionDimensions(
-            batch=list(convolution_dims.depth),
-            m=list(convolution_dims.batch) + list(convolution_dims.output_image),
-            n=list(convolution_dims.output_channel),
-            k=list(convolution_dims.filter_loop) + list(convolution_dims.input_channel),
+            batch=sorted(list(convolution_dims.depth)),
+            m=sorted(
+                list(convolution_dims.batch) + list(convolution_dims.output_image)
+            ),
+            n=sorted(list(convolution_dims.output_channel)),
+            k=sorted(
+                list(convolution_dims.filter_loop)
+                + list(convolution_dims.input_channel)
+            ),
         )
 
         def find_iter_dim_size(iter_dim: int, operand: int):
