@@ -308,6 +308,17 @@ def generate_tile_and_fuse_constraints(
         )
     ]
 
+    # Avoid K padding.
+    constraints += [matmul_size.K[-1] == K[-1]]
+
+    # Avoid multi-trip loops.
+    elem_bitwidth = 16  # TODO: get this properly
+    rhs: z3.ArithRef = math.prod(workgroup_size) * (128 // elem_bitwidth)
+    constraints += [
+        (math.prod(m_tiles) * math.prod(k_tiles) * intrinsic_k) % rhs == 0,
+        (math.prod(n_tiles) * math.prod(k_tiles) * intrinsic_k) % rhs == 0,
+    ]
+
     constraints += [
         m_tiles[-1] >= intrinsic_mn,
         m_tiles[-1] % intrinsic_mn == 0,
