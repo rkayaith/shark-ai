@@ -111,20 +111,23 @@ def generate_generic_contraction_solutions(
                 dispatch_kind,
             )
             constraints += [v == 0 for v in subgroup_m_vars + subgroup_n_vars]
+            optional_constraints = []
         case iree_codegen.DispatchLoweringPassPipeline.LLVMGPUTileAndFuse:
-            constraints = dispatch_constraints.generate_tile_and_fuse_constraints(
-                matmul_size,
-                lhs_type,
-                rhs_type,
-                res_type,
-                [m_vars, n_vars, k_vars, subgroup_m_vars, subgroup_n_vars],
-                num_subgroups,
-                subgroup_size,
-                [intrinsic_mn, intrinsic_k],
-                [wg_x, wg_y, wg_z],
-                sg_m_cnt,
-                sg_n_cnt,
-                gpu_target_info,
+            constraints, optional_constraints = (
+                dispatch_constraints.generate_tile_and_fuse_constraints(
+                    matmul_size,
+                    lhs_type,
+                    rhs_type,
+                    res_type,
+                    [m_vars, n_vars, k_vars, subgroup_m_vars, subgroup_n_vars],
+                    num_subgroups,
+                    subgroup_size,
+                    [intrinsic_mn, intrinsic_k],
+                    [wg_x, wg_y, wg_z],
+                    sg_m_cnt,
+                    sg_n_cnt,
+                    gpu_target_info,
+                )
             )
         case _:
             raise ValueError(f"Unsupported pipeline: {codegen_pipeline}")
@@ -137,7 +140,7 @@ def generate_generic_contraction_solutions(
     )
 
     i = 0
-    for model in find_solutions(all_vars, constraints):
+    for model in find_solutions(all_vars, constraints, optional_constraints):
         lookup = lambda var: model[var].as_long()
         intrinsic_mnk_shape = (
             lookup(intrinsic_mn),
@@ -444,13 +447,31 @@ def generate_attention_solutions(
             yield config_list
 
 
-def find_solutions(all_vars: Sequence[z3.ArithRef], constraints: Sequence[z3.ExprRef]):
+def find_solutions(
+    all_vars: Sequence[z3.ArithRef],
+    constraints: Sequence[z3.ExprRef],
+    optional_constraints: Sequence[z3.ExprRef],
+):
+    prev_solutions = list[z3.ExprRef]()
     solver = z3.Solver()
     solver.add(z3.simplify(z3.And(constraints)))
-    while solver.check() == z3.sat:
-        model = solver.model()
-        solver.add(z3.simplify(z3.Not(z3.And(list(x == model[x] for x in all_vars)))))
-        yield model
+    # Try to solve with a prefix of 'optional_constraints' first, shrinking the
+    # prefix once we run out of solutions.
+    for num_optional_constraints in range(len(optional_constraints), -1, -1):
+        solver.push()  # Create backtracing point with base constraints
+
+        solver.add(*prev_solutions)
+        solver.add(*optional_constraints[:num_optional_constraints])
+        while solver.check() == z3.sat:
+            model = solver.model()
+            yield model
+            soln_constraint = z3.simplify(
+                z3.Not(z3.And(list(x == model[x] for x in all_vars)))
+            )
+            solver.add(soln_constraint)
+            prev_solutions.append(soln_constraint)
+
+        solver.pop()  # Reset to base constraints
 
 
 class ConstraintGenerator(ABC):
