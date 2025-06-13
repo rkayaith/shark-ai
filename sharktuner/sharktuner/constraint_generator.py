@@ -7,7 +7,7 @@
 import z3  # type: ignore
 import math
 from abc import ABC, abstractmethod
-from typing import Iterator
+from typing import Iterator, Sequence
 from typing import Optional
 
 from iree.compiler import ir  # type: ignore
@@ -93,7 +93,6 @@ def generate_generic_contraction_solutions(
         ]
     )
 
-    solver = z3.Solver()
     match codegen_pipeline:
         case iree_codegen.DispatchLoweringPassPipeline.LLVMGPUVectorDistribute:
             constraints = dispatch_constraints.generate_vector_distribute_constraints(
@@ -127,9 +126,8 @@ def generate_generic_contraction_solutions(
                 sg_n_cnt,
                 gpu_target_info,
             )
-
-    solver.add(z3.simplify(z3.And(constraints)))
-    tuner_ctx.logger.debug(f"Initial constraints: {solver}")
+        case _:
+            raise ValueError(f"Unsupported pipeline: {codegen_pipeline}")
 
     num_loops = (
         len(contraction_dims.m)
@@ -139,8 +137,7 @@ def generate_generic_contraction_solutions(
     )
 
     i = 0
-    while solver.check() == z3.sat:
-        model = solver.model()
+    for model in find_solutions(all_vars, constraints):
         lookup = lambda var: model[var].as_long()
         intrinsic_mnk_shape = (
             lookup(intrinsic_mn),
@@ -250,7 +247,6 @@ def generate_generic_contraction_solutions(
             padding=padding,
         )
 
-        solver.add(z3.simplify(z3.Not(z3.And(list(x == model[x] for x in all_vars)))))
         i += 1
 
         for compilation_info in compilation_infos:
@@ -446,6 +442,15 @@ def generate_attention_solutions(
                 ),
             ]
             yield config_list
+
+
+def find_solutions(all_vars: Sequence[z3.ArithRef], constraints: Sequence[z3.ExprRef]):
+    solver = z3.Solver()
+    solver.add(z3.simplify(z3.And(constraints)))
+    while solver.check() == z3.sat:
+        model = solver.model()
+        solver.add(z3.simplify(z3.Not(z3.And(list(x == model[x] for x in all_vars)))))
+        yield model
 
 
 class ConstraintGenerator(ABC):

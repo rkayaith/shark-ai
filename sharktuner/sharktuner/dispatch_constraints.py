@@ -189,7 +189,7 @@ def generate_vector_distribute_constraints(
     subgroup_n_count: z3.ArithRef,
     gpu_target_info: iree_gpu.TargetInfo,
     dispatch_kind: common.DispatchKind,
-):
+) -> list[z3.ExprRef]:
     M, N, K = (
         matmul_size.M[-1],
         matmul_size.N[-1],
