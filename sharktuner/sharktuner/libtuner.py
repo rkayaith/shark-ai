@@ -633,6 +633,8 @@ def multiprocess_progress_wrapper(
     results = []
     initializer_inputs = initializer_inputs or ()
 
+    best_result: BenchmarkResult | None = None
+
     # Create a multiprocessing pool.
     sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
     with multiprocessing.Pool(
@@ -645,6 +647,12 @@ def multiprocess_progress_wrapper(
                 # Use imap_unordered to asynchronously execute the worker function on each task.
                 for result in worker_pool.imap_unordered(function, task_list):
                     results.append(result)
+                    if isinstance(result, BenchmarkResult):
+                        if best_result is None or result.time < best_result.time:
+                            best_result = result
+                            print(
+                                f"> New best result: {result.candidate_id=}, {result.time=}"
+                            )
                     pbar.update(1)  # Update progress bar
                     # If time limit is reached, stop progress wrapper.
                     if time_budget is not None and time_budget.expired():
