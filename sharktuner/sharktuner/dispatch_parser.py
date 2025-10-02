@@ -81,8 +81,9 @@ class ConvolutionOpInterfaceParser(DispatchParser):
             list(convolution_dims.input_channel),
         )
         nhwc_hwcf = ([0], [1, 2], [], [3], [4, 5], [6])
+        nhwc_chwf = ([0], [1, 2], [], [3], [5, 6], [4])
         nhwgc_hwcf = ([0], [1, 2], [3], [4], [5, 6], [7])
-        if convolution_dims not in [nhwc_hwcf, nhwgc_hwcf]:
+        if convolution_dims not in [nhwc_hwcf, nhwc_chwf, nhwgc_hwcf]:
             breakpoint()
             return False
         return True
