@@ -83,9 +83,15 @@ class ConvolutionOpInterfaceParser(DispatchParser):
         nhwc_hwcf = ([0], [1, 2], [], [3], [4, 5], [6])
         nhwc_chwf = ([0], [1, 2], [], [3], [5, 6], [4])
         nhwgc_hwcf = ([0], [1, 2], [3], [4], [5, 6], [7])
-        if convolution_dims not in [nhwc_hwcf, nhwc_chwf, nhwgc_hwcf]:
-            breakpoint()
+        if convolution_dims not in [nhwc_hwcf]:
+            raise ValueError(
+                f"Unsupported convolution: {convolution_dims}, root_op:\n"
+                + str(root_op)
+            )
             return False
+        # if convolution_dims not in [nhwc_hwcf, nhwc_chwf, nhwgc_hwcf]:
+        #     breakpoint()
+        #     return False
         return True
 
 
